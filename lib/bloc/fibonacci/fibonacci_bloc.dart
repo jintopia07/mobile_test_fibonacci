@@ -40,33 +40,27 @@ class FibonacciState extends Equatable {
       mainItems; // Changed to store index with item
   final List<MapEntry<int, FibonacciItem>> selectedItems;
   final FibonacciType? selectedType;
-  final bool shouldShowBottomSheet;
 
   const FibonacciState({
     this.mainItems = const [],
     this.selectedItems = const [],
     this.selectedType,
-    this.shouldShowBottomSheet = false,
   });
 
   FibonacciState copyWith({
     List<MapEntry<int, FibonacciItem>>? mainItems,
     List<MapEntry<int, FibonacciItem>>? selectedItems,
     FibonacciType? selectedType,
-    bool? shouldShowBottomSheet,
   }) {
     return FibonacciState(
       mainItems: mainItems ?? this.mainItems,
       selectedItems: selectedItems ?? this.selectedItems,
       selectedType: selectedType ?? this.selectedType,
-      shouldShowBottomSheet:
-          shouldShowBottomSheet ?? this.shouldShowBottomSheet,
     );
   }
 
   @override
-  List<Object?> get props =>
-      [mainItems, selectedItems, selectedType, shouldShowBottomSheet];
+  List<Object?> get props => [mainItems, selectedItems, selectedType];
 }
 
 // BLoC
@@ -148,7 +142,6 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         mainItems: remainingItems,
         selectedItems: [selectedEntry],
         selectedType: event.item.type,
-        shouldShowBottomSheet: true, // เernessการ seriousness
       ));
     } else {
       if (state.selectedType != event.item.type) {
@@ -183,29 +176,24 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onReturnItem(ReturnItemToMain event, Emitter<FibonacciState> emit) {
-    final updatedMainItems = state.mainItems.map((entry) {
-      return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
-    }).toList();
-
+    // สร้าง item ที่จะกลับไป main list โดยลบ highlight
     final returningEntry =
-        MapEntry(event.index, event.item.copyWith(isHighlighted: true));
+        MapEntry(event.index, event.item.copyWith(isHighlighted: false));
 
-    final newMainItems = [...updatedMainItems, returningEntry];
-    newMainItems.sort((a, b) => a.key.compareTo(b.key));
+    // เลือก item ที่จะกลับไป main list
+    final updatedMainItems = [...state.mainItems, returningEntry];
+    updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
 
+    // ลบ item ออกจาก selected list
     final remainingSelectedItems =
         state.selectedItems.where((entry) => entry.key != event.index).toList();
 
     emit(state.copyWith(
-      mainItems: newMainItems,
+      mainItems: updatedMainItems,
       selectedItems: remainingSelectedItems,
+      // ถ้า selected list ว่างเปล่า ให้ล้าง selectedType ด้วย
       selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
-      shouldShowBottomSheet: false, // เปลี่ยนเป็น false  เมื่อ return item
     ));
-
-    Future.delayed(const Duration(seconds: 2), () {
-      add(ClearHighlight());
-    });
   }
 
   void _onClearHighlight(ClearHighlight event, Emitter<FibonacciState> emit) {
