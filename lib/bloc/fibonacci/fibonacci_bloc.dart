@@ -14,26 +14,31 @@ class InitializeFibonacci extends FibonacciEvent {}
 
 class SelectFibonacciItem extends FibonacciEvent {
   final FibonacciItem item;
-  const SelectFibonacciItem(this.item);
+  final int index;
+
+  const SelectFibonacciItem(this.item, this.index);
 
   @override
-  List<Object> get props => [item];
+  List<Object> get props => [item, index];
 }
 
 class ReturnItemToMain extends FibonacciEvent {
   final FibonacciItem item;
-  const ReturnItemToMain(this.item);
+  final int index;
+
+  const ReturnItemToMain(this.item, this.index);
 
   @override
-  List<Object> get props => [item];
+  List<Object> get props => [item, index];
 }
 
 class ClearHighlight extends FibonacciEvent {}
 
 // State
 class FibonacciState extends Equatable {
-  final List<FibonacciItem> mainItems;
-  final List<FibonacciItem> selectedItems;
+  final List<MapEntry<int, FibonacciItem>>
+      mainItems; // Changed to store index with item
+  final List<MapEntry<int, FibonacciItem>> selectedItems;
   final FibonacciType? selectedType;
 
   const FibonacciState({
@@ -43,8 +48,8 @@ class FibonacciState extends Equatable {
   });
 
   FibonacciState copyWith({
-    List<FibonacciItem>? mainItems,
-    List<FibonacciItem>? selectedItems,
+    List<MapEntry<int, FibonacciItem>>? mainItems,
+    List<MapEntry<int, FibonacciItem>>? selectedItems,
     FibonacciType? selectedType,
   }) {
     return FibonacciState(
@@ -83,10 +88,13 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
 
   void _onInitialize(InitializeFibonacci event, Emitter<FibonacciState> emit) {
     final fibonacci = _generateFibonacci(41);
-    final items = fibonacci.map((number) {
-      return FibonacciItem(
-        number: number,
-        type: _getTypeForNumber(number),
+    final items = fibonacci.asMap().entries.map((entry) {
+      return MapEntry(
+        entry.key,
+        FibonacciItem(
+          number: entry.value,
+          type: _getTypeForNumber(entry.value),
+        ),
       );
     }).toList();
 
@@ -94,49 +102,98 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onSelectItem(SelectFibonacciItem event, Emitter<FibonacciState> emit) {
-    // Find all items of the same type
-    final itemsOfSameType =
-        state.mainItems.where((item) => item.type == event.item.type).toList();
+    // ตรวจสอบว่า item อยู่ใน selectedItems ั้น
+    final isInSelectedItems =
+        state.selectedItems.any((entry) => entry.key == event.index);
 
-    // Remove selected items from main list
-    final remainingItems =
-        state.mainItems.where((item) => item.type != event.item.type).toList();
+    if (isInSelectedItems) {
+      // ถ้าอยู่ใน selectedItems แล้ว เพียงแค่<lemmaท highlight
+      final updatedSelectedItems = state.selectedItems.map((entry) {
+        // ถ้าเป็น item <lemma <lemma ให้ highlight
+        if (entry.key == event.index) {
+          return MapEntry(entry.key, entry.value.copyWith(isHighlighted: true));
+        }
+        // ถ้าไม่ใช่ ให้ลบ highlight
+        return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
+      }).toList();
 
-    emit(state.copyWith(
-      mainItems: remainingItems,
-      selectedItems: itemsOfSameType,
-      selectedType: event.item.type,
-    ));
+      // เรียงลำ scouting ใหม่ให้ item <lemma highlight อยู่ในตำแหน่ง<lemma
+      updatedSelectedItems.sort((a, b) => a.key.compareTo(b.key));
+
+      emit(state.copyWith(
+        selectedItems: updatedSelectedItems,
+      ));
+      return;
+    }
+
+    // ลบ item ใหม่จาก main list
+    final currentSelectedItems = state.selectedItems
+        .map((e) => MapEntry(e.key, e.value.copyWith(isHighlighted: false)))
+        .toList();
+
+    final selectedEntry =
+        MapEntry(event.index, event.item.copyWith(isHighlighted: true));
+
+    if (state.selectedItems.isEmpty) {
+      final remainingItems =
+          state.mainItems.where((entry) => entry.key != event.index).toList();
+
+      emit(state.copyWith(
+        mainItems: remainingItems,
+        selectedItems: [selectedEntry],
+        selectedType: event.item.type,
+      ));
+    } else {
+      if (state.selectedType != event.item.type) {
+        final updatedMainItems = [...state.mainItems];
+        updatedMainItems.addAll(currentSelectedItems);
+        updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
+
+        final newRemainingItems = updatedMainItems
+            .where((entry) => entry.key != event.index)
+            .toList();
+
+        emit(state.copyWith(
+          mainItems: newRemainingItems,
+          selectedItems: [selectedEntry],
+          selectedType: event.item.type,
+        ));
+      } else {
+        final remainingItems =
+            state.mainItems.where((entry) => entry.key != event.index).toList();
+
+        final newSelectedItems = [...currentSelectedItems, selectedEntry];
+        // เรียงลำ scouting ตาม index เลือก<lemmaลำ scouting แสดงผล
+        newSelectedItems.sort((a, b) => a.key.compareTo(b.key));
+
+        emit(state.copyWith(
+          mainItems: remainingItems,
+          selectedItems: newSelectedItems,
+          selectedType: event.item.type,
+        ));
+      }
+    }
   }
 
   void _onReturnItem(ReturnItemToMain event, Emitter<FibonacciState> emit) {
-    // Remove item from selected items
-    final newSelectedItems = state.selectedItems
-        .where((item) => item.number != event.item.number)
-        .toList();
+    // ค่า item โดยลบ highlight
+    final returningEntry =
+        MapEntry(event.index, event.item.copyWith(isHighlighted: false));
 
-    // Add item back to main items with highlight
-    final highlightedItem = event.item.copyWith(isHighlighted: true);
-    final newMainItems = [...state.mainItems, highlightedItem]
-      ..sort((a, b) => a.number.compareTo(b.number)); // Keep sorted order
+    final updatedMainItems = [...state.mainItems, returningEntry];
+    updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
+
+    final remainingSelectedItems =
+        state.selectedItems.where((entry) => entry.key != event.index).toList();
 
     emit(state.copyWith(
-      mainItems: newMainItems,
-      selectedItems: newSelectedItems,
-      selectedType: newSelectedItems.isEmpty ? null : state.selectedType,
+      mainItems: updatedMainItems,
+      selectedItems: remainingSelectedItems,
+      selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
     ));
-
-    // Clear highlight after a delay
-    Future.delayed(const Duration(seconds: 2), () {
-      add(ClearHighlight());
-    });
   }
 
   void _onClearHighlight(ClearHighlight event, Emitter<FibonacciState> emit) {
-    final updatedMainItems = state.mainItems
-        .map((item) => item.copyWith(isHighlighted: false))
-        .toList();
-
-    emit(state.copyWith(mainItems: updatedMainItems));
+    emit(state.copyWith(selectedType: null));
   }
 }

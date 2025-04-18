@@ -56,7 +56,7 @@ class FibonacciItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: item.isHighlighted ? 4 : 0,
+      elevation: item.isHighlighted ? 4 : 0, // เล่ม elevation เมื่อ highlight
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -70,7 +70,8 @@ class FibonacciItemWidget extends StatelessWidget {
             color: _getBackgroundColor(),
             borderRadius: BorderRadius.circular(12),
             border: item.isHighlighted
-                ? Border.all(color: Colors.orange, width: 2)
+                ? Border.all(
+                    color: Colors.orange, width: 2) // เล่มขอบเมื่อ highlight
                 : null,
           ),
           child: Row(

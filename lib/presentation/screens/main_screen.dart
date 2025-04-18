@@ -15,14 +15,14 @@ class MainScreen extends StatelessWidget {
               ListView.builder(
                 itemCount: state.mainItems.length,
                 itemBuilder: (context, index) {
-                  final item = state.mainItems[index];
+                  final entry = state.mainItems[index];
                   return FibonacciItemWidget(
-                    item: item,
-                    index: index,
+                    item: entry.value,
+                    index: entry.key,
                     onTap: () {
                       context
                           .read<FibonacciBloc>()
-                          .add(SelectFibonacciItem(item));
+                          .add(SelectFibonacciItem(entry.value, entry.key));
                     },
                   );
                 },
@@ -64,10 +64,10 @@ class MainScreen extends StatelessWidget {
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: state.selectedItems.length,
                           itemBuilder: (context, index) {
-                            final item = state.selectedItems[index];
+                            final entry = state.selectedItems[index];
                             return FibonacciItemWidget(
-                              item: item,
-                              index: index,
+                              item: entry.value,
+                              index: entry.key,
                               onTap: () {}, // Disabled tap in bottom sheet
                             );
                           },

@@ -15,11 +15,13 @@ class FibonacciPage extends StatefulWidget {
 class _FibonacciPageState extends State<FibonacciPage> {
   final ScrollController _scrollController = ScrollController();
 
-  void _scrollToHighlightedItem(List<FibonacciItem> items) {
-    final highlightedIndex = items.indexWhere((item) => item.isHighlighted);
+  void _scrollToHighlightedItem(List<MapEntry<int, FibonacciItem>> items) {
+    final highlightedIndex =
+        items.indexWhere((entry) => entry.value.isHighlighted);
     if (highlightedIndex != -1) {
       _scrollController.animateTo(
-        highlightedIndex * 88.0, // Approximate height of each item
+        highlightedIndex *
+            88.0, // ความ<|im_start|>ประมาณของแต่ละ item (รวม padding)
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
@@ -29,40 +31,40 @@ class _FibonacciPageState extends State<FibonacciPage> {
   void _showBottomSheet(BuildContext context, FibonacciState state) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.5,
+      ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              'Selected ${state.selectedType?.toString().split('.').last ?? ''} items',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: state.selectedItems.length,
+                itemBuilder: (context, index) {
+                  final entry = state.selectedItems[index];
+                  return FibonacciItemWidget(
+                    key: ValueKey(entry.value.number),
+                    item: entry.value,
+                    index: entry.key,
+                    onTap: () {
+                      // ส่ง event เมื่อ item ใน bottomsheet
+                      context
+                          .read<FibonacciBloc>()
+                          .add(SelectFibonacciItem(entry.value, entry.key));
+                    },
+                  );
+                },
               ),
             ),
-          ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: state.selectedItems.length,
-            itemBuilder: (context, index) {
-              final item = state.selectedItems[index];
-              return FibonacciItemWidget(
-                key: ValueKey(item.number),
-                item: item,
-                index: index,
-                onTap: () {
-                  context.read<FibonacciBloc>().add(ReturnItemToMain(item));
-                  Navigator.pop(context);
-                },
-              );
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -78,8 +80,8 @@ class _FibonacciPageState extends State<FibonacciPage> {
       backgroundColor: Colors.grey[100],
       body: BlocConsumer<FibonacciBloc, FibonacciState>(
         listener: (context, state) {
-          if (state.mainItems.any((item) => item.isHighlighted)) {
-            _scrollToHighlightedItem(state.mainItems);
+          if (state.selectedItems.isNotEmpty) {
+            _showBottomSheet(context, state);
           }
         },
         builder: (context, state) {
@@ -94,14 +96,15 @@ class _FibonacciPageState extends State<FibonacciPage> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: state.mainItems.length,
             itemBuilder: (context, index) {
-              final item = state.mainItems[index];
+              final entry = state.mainItems[index];
               return FibonacciItemWidget(
-                key: ValueKey(item.number),
-                item: item,
-                index: index,
+                key: ValueKey(entry.value.number),
+                item: entry.value,
+                index: entry.key,
                 onTap: () {
-                  context.read<FibonacciBloc>().add(SelectFibonacciItem(item));
-                  _showBottomSheet(context, state);
+                  context
+                      .read<FibonacciBloc>()
+                      .add(SelectFibonacciItem(entry.value, entry.key));
                 },
               );
             },
