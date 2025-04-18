@@ -176,19 +176,22 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onReturnItem(ReturnItemToMain event, Emitter<FibonacciState> emit) {
-    // ค่า item โดยลบ highlight
+    // สร้าง item ที่จะกลับไป main list โดยลบ highlight
     final returningEntry =
         MapEntry(event.index, event.item.copyWith(isHighlighted: false));
 
+    // เลือก item ที่จะกลับไป main list
     final updatedMainItems = [...state.mainItems, returningEntry];
     updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
 
+    // ลบ item ออกจาก selected list
     final remainingSelectedItems =
         state.selectedItems.where((entry) => entry.key != event.index).toList();
 
     emit(state.copyWith(
       mainItems: updatedMainItems,
       selectedItems: remainingSelectedItems,
+      // ถ้า selected list ว่างเปล่า ให้ล้าง selectedType ด้วย
       selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
     ));
   }

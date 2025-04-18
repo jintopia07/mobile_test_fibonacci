@@ -38,32 +38,35 @@ class _FibonacciPageState extends State<FibonacciPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: state.selectedItems.length,
-                itemBuilder: (context, index) {
-                  final entry = state.selectedItems[index];
-                  return FibonacciItemWidget(
-                    key: ValueKey(entry.value.number),
-                    item: entry.value,
-                    index: entry.key,
-                    onTap: () {
-                      // ส่ง event เมื่อ item ใน bottomsheet
-                      context
-                          .read<FibonacciBloc>()
-                          .add(SelectFibonacciItem(entry.value, entry.key));
-                    },
-                  );
-                },
+      builder: (bottomSheetContext) => BlocProvider.value(
+        value: context.read<FibonacciBloc>(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  itemCount: state.selectedItems.length,
+                  itemBuilder: (context, index) {
+                    final entry = state.selectedItems[index];
+                    return FibonacciItemWidget(
+                      key: ValueKey('selected_${entry.key}'),
+                      item: entry.value,
+                      index: entry.key,
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        context
+                            .read<FibonacciBloc>()
+                            .add(ReturnItemToMain(entry.value, entry.key));
+                      },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
