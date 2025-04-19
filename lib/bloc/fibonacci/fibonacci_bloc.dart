@@ -40,27 +40,33 @@ class FibonacciState extends Equatable {
       mainItems; // Changed to store index with item
   final List<MapEntry<int, FibonacciItem>> selectedItems;
   final FibonacciType? selectedType;
+  final bool shouldShowBottomSheet;
 
   const FibonacciState({
     this.mainItems = const [],
     this.selectedItems = const [],
     this.selectedType,
+    this.shouldShowBottomSheet = false,
   });
 
   FibonacciState copyWith({
     List<MapEntry<int, FibonacciItem>>? mainItems,
     List<MapEntry<int, FibonacciItem>>? selectedItems,
     FibonacciType? selectedType,
+    bool? shouldShowBottomSheet,
   }) {
     return FibonacciState(
       mainItems: mainItems ?? this.mainItems,
       selectedItems: selectedItems ?? this.selectedItems,
       selectedType: selectedType ?? this.selectedType,
+      shouldShowBottomSheet:
+          shouldShowBottomSheet ?? this.shouldShowBottomSheet,
     );
   }
 
   @override
-  List<Object?> get props => [mainItems, selectedItems, selectedType];
+  List<Object?> get props =>
+      [mainItems, selectedItems, selectedType, shouldShowBottomSheet];
 }
 
 // BLoC
@@ -102,101 +108,97 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onSelectItem(SelectFibonacciItem event, Emitter<FibonacciState> emit) {
-    // ตรวจสอบว่า item อยู่ใน selectedItems ั้น
     final isInSelectedItems =
         state.selectedItems.any((entry) => entry.key == event.index);
 
-    if (isInSelectedItems) {
-      // ถ้าอยู่ใน selectedItems แล้ว เพียงแค่<lemmaท highlight
-      final updatedSelectedItems = state.selectedItems.map((entry) {
-        // ถ้าเป็น item <lemma <lemma ให้ highlight
-        if (entry.key == event.index) {
-          return MapEntry(entry.key, entry.value.copyWith(isHighlighted: true));
-        }
-        // ถ้าไม่ใช่ ให้ลบ highlight
-        return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
-      }).toList();
+    if (isInSelectedItems) return;
 
-      // เรียงลำ scouting ใหม่ให้ item <lemma highlight อยู่ในตำแหน่ง<lemma
-      updatedSelectedItems.sort((a, b) => a.key.compareTo(b.key));
+    // Clear highlight จากรายการก่อน
+    final updatedMainItems = state.mainItems.map((entry) {
+      return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
+    }).toList();
 
-      emit(state.copyWith(
-        selectedItems: updatedSelectedItems,
-      ));
-      return;
-    }
-
-    // ลบ item ใหม่จาก main list
     final currentSelectedItems = state.selectedItems
         .map((e) => MapEntry(e.key, e.value.copyWith(isHighlighted: false)))
         .toList();
 
     final selectedEntry =
-        MapEntry(event.index, event.item.copyWith(isHighlighted: true));
+        MapEntry(event.index, event.item.copyWith(isHighlighted: false));
 
     if (state.selectedItems.isEmpty) {
       final remainingItems =
-          state.mainItems.where((entry) => entry.key != event.index).toList();
+          updatedMainItems.where((entry) => entry.key != event.index).toList();
 
       emit(state.copyWith(
         mainItems: remainingItems,
         selectedItems: [selectedEntry],
         selectedType: event.item.type,
+        shouldShowBottomSheet: true,
       ));
     } else {
       if (state.selectedType != event.item.type) {
-        final updatedMainItems = [...state.mainItems];
-        updatedMainItems.addAll(currentSelectedItems);
-        updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
+        final newMainItems = [...updatedMainItems];
+        newMainItems.addAll(currentSelectedItems);
+        newMainItems.sort((a, b) => a.key.compareTo(b.key));
 
-        final newRemainingItems = updatedMainItems
-            .where((entry) => entry.key != event.index)
-            .toList();
+        final newRemainingItems =
+            newMainItems.where((entry) => entry.key != event.index).toList();
 
         emit(state.copyWith(
           mainItems: newRemainingItems,
           selectedItems: [selectedEntry],
           selectedType: event.item.type,
+          shouldShowBottomSheet: true,
         ));
       } else {
-        final remainingItems =
-            state.mainItems.where((entry) => entry.key != event.index).toList();
+        final remainingItems = updatedMainItems
+            .where((entry) => entry.key != event.index)
+            .toList();
 
         final newSelectedItems = [...currentSelectedItems, selectedEntry];
-        // เรียงลำ scouting ตาม index เลือก<lemmaลำ scouting แสดงผล
         newSelectedItems.sort((a, b) => a.key.compareTo(b.key));
 
         emit(state.copyWith(
           mainItems: remainingItems,
           selectedItems: newSelectedItems,
           selectedType: event.item.type,
+          shouldShowBottomSheet: true,
         ));
       }
     }
   }
 
   void _onReturnItem(ReturnItemToMain event, Emitter<FibonacciState> emit) {
-    // สร้าง item ที่จะกลับไป main list โดยลบ highlight
-    final returningEntry =
-        MapEntry(event.index, event.item.copyWith(isHighlighted: false));
+    final returningEntry = MapEntry(
+      event.index,
+      event.item.copyWith(isHighlighted: true),
+    );
 
-    // เลือก item ที่จะกลับไป main list
     final updatedMainItems = [...state.mainItems, returningEntry];
     updatedMainItems.sort((a, b) => a.key.compareTo(b.key));
 
-    // ลบ item ออกจาก selected list
     final remainingSelectedItems =
         state.selectedItems.where((entry) => entry.key != event.index).toList();
 
     emit(state.copyWith(
       mainItems: updatedMainItems,
       selectedItems: remainingSelectedItems,
-      // ถ้า selected list ว่างเปล่า ให้ล้าง selectedType ด้วย
       selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
+      shouldShowBottomSheet: false, // ปิด bottomsheet
     ));
+
+    // Future.delayed(const Duration(seconds: 2), () {
+    //   add(ClearHighlight());
+    // });
   }
 
   void _onClearHighlight(ClearHighlight event, Emitter<FibonacciState> emit) {
-    emit(state.copyWith(selectedType: null));
+    final updatedMainItems = state.mainItems.map((entry) {
+      return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
+    }).toList();
+
+    emit(state.copyWith(
+      mainItems: updatedMainItems,
+    ));
   }
 }
