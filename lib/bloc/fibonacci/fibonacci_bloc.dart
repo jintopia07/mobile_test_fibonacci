@@ -108,12 +108,7 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onSelectItem(SelectFibonacciItem event, Emitter<FibonacciState> emit) {
-    final isInSelectedItems =
-        state.selectedItems.any((entry) => entry.key == event.index);
-
-    if (isInSelectedItems) return;
-
-    // Clear highlight จากรายการก่อน
+    // ล้าง highlight จากรายการทั้งหมดก่อน
     final updatedMainItems = state.mainItems.map((entry) {
       return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
     }).toList();
@@ -122,10 +117,14 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         .map((e) => MapEntry(e.key, e.value.copyWith(isHighlighted: false)))
         .toList();
 
-    final selectedEntry =
-        MapEntry(event.index, event.item.copyWith(isHighlighted: false));
+    // สร้างรายการใหม่พร้อม highlight
+    final selectedEntry = MapEntry(
+      event.index,
+      event.item.copyWith(isHighlighted: true), // highlight รายการใหม่
+    );
 
     if (state.selectedItems.isEmpty) {
+      // แรก ไม่มีรายการ
       final remainingItems =
           updatedMainItems.where((entry) => entry.key != event.index).toList();
 
@@ -135,36 +134,35 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         selectedType: event.item.type,
         shouldShowBottomSheet: true,
       ));
+    } else if (state.selectedType == event.item.type) {
+      // รายการประเภทเดียวกัน
+      final remainingItems =
+          updatedMainItems.where((entry) => entry.key != event.index).toList();
+
+      final newSelectedItems = [...currentSelectedItems, selectedEntry];
+      newSelectedItems.sort((a, b) => a.key.compareTo(b.key));
+
+      emit(state.copyWith(
+        mainItems: remainingItems,
+        selectedItems: newSelectedItems,
+        selectedType: event.item.type,
+        shouldShowBottomSheet: true,
+      ));
     } else {
-      if (state.selectedType != event.item.type) {
-        final newMainItems = [...updatedMainItems];
-        newMainItems.addAll(currentSelectedItems);
-        newMainItems.sort((a, b) => a.key.compareTo(b.key));
+      // รายการต่างประเภท
+      final newMainItems = [...updatedMainItems];
+      newMainItems.addAll(currentSelectedItems);
+      newMainItems.sort((a, b) => a.key.compareTo(b.key));
 
-        final newRemainingItems =
-            newMainItems.where((entry) => entry.key != event.index).toList();
+      final newRemainingItems =
+          newMainItems.where((entry) => entry.key != event.index).toList();
 
-        emit(state.copyWith(
-          mainItems: newRemainingItems,
-          selectedItems: [selectedEntry],
-          selectedType: event.item.type,
-          shouldShowBottomSheet: true,
-        ));
-      } else {
-        final remainingItems = updatedMainItems
-            .where((entry) => entry.key != event.index)
-            .toList();
-
-        final newSelectedItems = [...currentSelectedItems, selectedEntry];
-        newSelectedItems.sort((a, b) => a.key.compareTo(b.key));
-
-        emit(state.copyWith(
-          mainItems: remainingItems,
-          selectedItems: newSelectedItems,
-          selectedType: event.item.type,
-          shouldShowBottomSheet: true,
-        ));
-      }
+      emit(state.copyWith(
+        mainItems: newRemainingItems,
+        selectedItems: [selectedEntry],
+        selectedType: event.item.type,
+        shouldShowBottomSheet: true,
+      ));
     }
   }
 
@@ -184,7 +182,7 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
       mainItems: updatedMainItems,
       selectedItems: remainingSelectedItems,
       selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
-      shouldShowBottomSheet: false, // ปิด bottomsheet
+      shouldShowBottomSheet: false, //  bottomsheet
     ));
 
     // Future.delayed(const Duration(seconds: 2), () {

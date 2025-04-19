@@ -22,9 +22,8 @@ class _FibonacciPageState extends State<FibonacciPage> {
     if (highlightedIndex != -1) {
       final screenHeight = MediaQuery.of(context).size.height;
       final appBarHeight = AppBar().preferredSize.height;
-      final itemHeight = 88.0;
+      final itemHeight = 88.0; // Adjust this based on your item height
 
-      // Calculate position to center the item on visible screen area
       final visibleScreenHeight = screenHeight - appBarHeight;
       final offset = (highlightedIndex * itemHeight) -
           (visibleScreenHeight / 2) +
@@ -57,17 +56,6 @@ class _FibonacciPageState extends State<FibonacciPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Selected ${state.selectedType?.toString().split('.').last ?? ''} items',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -75,13 +63,11 @@ class _FibonacciPageState extends State<FibonacciPage> {
                   itemBuilder: (context, index) {
                     final entry = state.selectedItems[index];
                     return FibonacciItemWidget(
-                      key: ValueKey('selected_${entry.key}'),
+                      key: ValueKey(entry.value.number),
                       item: entry.value,
                       index: entry.key,
                       onTap: () {
-                        //  bottomsheet ก่อน
                         Navigator.pop(bottomSheetContext);
-                        // ส่ง event ย้ายรายการ
                         context
                             .read<FibonacciBloc>()
                             .add(ReturnItemToMain(entry.value, entry.key));
@@ -108,33 +94,15 @@ class _FibonacciPageState extends State<FibonacciPage> {
       backgroundColor: Colors.grey[100],
       body: BlocConsumer<FibonacciBloc, FibonacciState>(
         listener: (context, state) {
-          // ตรวจสอบรายการ highlight และ scroll ตำแหน่ง
-          final highlightedItem = state.mainItems.firstWhere(
-              (entry) => entry.value.isHighlighted,
-              orElse: () => state.mainItems.first);
+          _scrollToHighlightedItem(state.mainItems);
 
-          if (highlightedItem.value.isHighlighted) {
-            final index = state.mainItems
-                .indexWhere((entry) => entry.key == highlightedItem.key);
-            if (index != -1) {
-              _scrollController.animateTo(
-                index * 88.0,
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeInOut,
-              );
-            }
-          }
-
-          // แสดง bottomsheet เฉพาะเมื่อ flag shouldShowBottomSheet เป็น true
-          if (state.shouldShowBottomSheet && state.selectedItems.isNotEmpty) {
+          if (state.shouldShowBottomSheet) {
             _showBottomSheet(context, state);
           }
         },
         builder: (context, state) {
           if (state.mainItems.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           return ListView.builder(
@@ -144,7 +112,7 @@ class _FibonacciPageState extends State<FibonacciPage> {
             itemBuilder: (context, index) {
               final entry = state.mainItems[index];
               return FibonacciItemWidget(
-                key: ValueKey('main_${entry.key}'),
+                key: ValueKey(entry.value.number),
                 item: entry.value,
                 index: entry.key,
                 onTap: () {
