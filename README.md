@@ -10,7 +10,7 @@ This project is a starting point for a Flutter application.
 
 <p align="center">
   
-  <img src="assets/images/ui.png" width="700" />
+  <img src="assets/images/ui.png" width="300" />
 </p>
 
-# mobile_test_fibonacci
+
