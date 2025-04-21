@@ -108,7 +108,7 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onSelectItem(SelectFibonacciItem event, Emitter<FibonacciState> emit) {
-    // ล้าง highlight จากรายการทั้งหมดก่อน
+    // ล้าง highlight จาก list ทังหมดก่อน
     final updatedMainItems = state.mainItems.map((entry) {
       return MapEntry(entry.key, entry.value.copyWith(isHighlighted: false));
     }).toList();
@@ -117,14 +117,18 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         .map((e) => MapEntry(e.key, e.value.copyWith(isHighlighted: false)))
         .toList();
 
-    // สร้างรายการใหม่พร้อม highlight
+    // lsit ใหม่พร้อม highlight
     final selectedEntry = MapEntry(
       event.index,
       event.item.copyWith(isHighlighted: true), // highlight รายการใหม่
     );
 
+    final alreadySelected =
+        state.selectedItems.any((entry) => entry.key == event.index);
+
+    if (alreadySelected) return;
+
     if (state.selectedItems.isEmpty) {
-      // แรก ไม่มีรายการ
       final remainingItems =
           updatedMainItems.where((entry) => entry.key != event.index).toList();
 
@@ -135,7 +139,7 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         shouldShowBottomSheet: true,
       ));
     } else if (state.selectedType == event.item.type) {
-      // รายการประเภทเดียวกัน
+      // list ประเภท
       final remainingItems =
           updatedMainItems.where((entry) => entry.key != event.index).toList();
 
@@ -149,7 +153,7 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
         shouldShowBottomSheet: true,
       ));
     } else {
-      // รายการต่างประเภท
+      // list ต่างประเภท
       final newMainItems = [...updatedMainItems];
       newMainItems.addAll(currentSelectedItems);
       newMainItems.sort((a, b) => a.key.compareTo(b.key));
@@ -167,6 +171,9 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
   }
 
   void _onReturnItem(ReturnItemToMain event, Emitter<FibonacciState> emit) {
+    print(
+        'Before return - Main items: ${state.mainItems.length}, Selected items: ${state.selectedItems.length}');
+
     final returningEntry = MapEntry(
       event.index,
       event.item.copyWith(isHighlighted: true),
@@ -178,16 +185,15 @@ class FibonacciBloc extends Bloc<FibonacciEvent, FibonacciState> {
     final remainingSelectedItems =
         state.selectedItems.where((entry) => entry.key != event.index).toList();
 
+    print(
+        'After return - Main items: ${updatedMainItems.length}, Remaining selected: ${remainingSelectedItems.length}');
+
     emit(state.copyWith(
       mainItems: updatedMainItems,
       selectedItems: remainingSelectedItems,
       selectedType: remainingSelectedItems.isEmpty ? null : state.selectedType,
-      shouldShowBottomSheet: false, //  bottomsheet
+      shouldShowBottomSheet: false,
     ));
-
-    // Future.delayed(const Duration(seconds: 2), () {
-    //   add(ClearHighlight());
-    // });
   }
 
   void _onClearHighlight(ClearHighlight event, Emitter<FibonacciState> emit) {

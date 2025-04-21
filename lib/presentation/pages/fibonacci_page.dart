@@ -41,45 +41,53 @@ class _FibonacciPageState extends State<FibonacciPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true,
+      enableDrag: true,
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.5,
       ),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (bottomSheetContext) => BlocProvider.value(
-        value: context.read<FibonacciBloc>(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: state.selectedItems.length,
-                  itemBuilder: (context, index) {
-                    final entry = state.selectedItems[index];
-                    return FibonacciItemWidget(
-                      key: ValueKey(entry.value.number),
-                      item: entry.value,
-                      index: entry.key,
-                      onTap: () {
-                        Navigator.pop(bottomSheetContext);
-                        context
-                            .read<FibonacciBloc>()
-                            .add(ReturnItemToMain(entry.value, entry.key));
-                      },
-                    );
-                  },
+      builder: (bottomSheetContext) {
+        // Future.delayed(const Duration(seconds: 2), () {
+        //   if (Navigator.of(bottomSheetContext).canPop()) {
+        //     Navigator.of(bottomSheetContext).pop();
+        //   }
+        // });
+
+        return BlocProvider.value(
+          value: context.read<FibonacciBloc>(),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: state.selectedItems.length,
+                    itemBuilder: (context, index) {
+                      final entry = state.selectedItems[index];
+                      return FibonacciItemWidget(
+                        key: ValueKey(entry.value.number),
+                        item: entry.value,
+                        index: entry.key,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          context
+                              .read<FibonacciBloc>()
+                              .add(ReturnItemToMain(entry.value, entry.key));
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
